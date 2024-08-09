@@ -1,6 +1,7 @@
-use crate::StateEnum;
+use crate::{get::StateEntry, StateEnum};
 
 use std::collections::HashMap;
+use std::vec::Vec;
 
 use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
@@ -72,6 +73,27 @@ pub struct EventParams {
     pub event_type: String,
     pub event_data: Option<serde_json::Value>,
 }
+
+pub struct CallServiceParams {
+    pub domain: String,
+    pub service: String,
+    pub service_data: Option<serde_json::Value>,
+}
+
+impl Requestable for CallServiceParams {
+    type S = Option<serde_json::Value>;
+
+    fn into_request(self) -> Request<Self::S> {
+
+        Request {
+            endpoint: format!("/api/services/{}/{}", self.domain, self.service).to_owned(),
+            body: self.service_data,
+        }
+    }
+}
+
+
+pub type CallServiceResponse = Vec<StateEntry>;
 
 impl Requestable for EventParams {
     type S = Option<serde_json::Value>;

@@ -112,6 +112,21 @@ impl Client {
         Ok(request)
     }
 
+    async fn post_body_request<S: Serialize, D: DeserializeOwned>(
+        &self,
+        post_param: post::Request<S>,
+    ) -> Result<D> {
+        let request = self
+            .build_post_request(&post_param.endpoint)
+            .json(&post_param.body)
+            .send()
+            .await?
+            .json::<D>()
+            .await?;
+
+        Ok(request)
+    }
+
     async fn get_text_request(&self, endpoint: &str) -> Result<String> {
         let request = self
             .build_get_request(endpoint)
@@ -544,9 +559,9 @@ impl Client {
         Ok(response)
     }
 
-    /// Calls the `/api/services/<domain>/<service>` endpoint which calls a service. Currently unimplemented.
-    pub async fn post_service(&self) -> Result<()> {
-        unimplemented!()
+    /// Calls the `/api/services/<domain>/<service>` endpoint which calls a service.
+    pub async fn post_service(&self, params: post::CallServiceParams) -> Result<post::CallServiceResponse> {
+        self.post_body_request(params.into_request()).await
     }
 
     /// Calls the `/api/template` endpoint which renders a Home Assistant template.
@@ -554,7 +569,7 @@ impl Client {
         self.post_text_request(params.into_request()).await
     }
 
-    /// Calls the `/api/config/core/check_config` endpoint which triggers a check of the current configuration. Currently unimplemented.
+    /// Calls the `/api/config/core/check_config` endpoint which triggers a check of the current configuration.
     pub async fn post_config_check(&self) -> Result<post::CheckConfigResponse> {
         self.post_request("/api/config/core/check_config").await
     }
