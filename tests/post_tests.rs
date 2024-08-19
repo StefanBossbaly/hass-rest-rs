@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{FixedOffset, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime};
 use home_assistant_rest::{post, Client, StateEnum};
 use mockito::{Mock, ServerGuard};
 use serde_json::json;
@@ -322,6 +322,43 @@ async fn test_template1_async() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     assert_eq!(template_response, "It is 2023-04-27 08:27:40.075595-04:00!");
+
+    mock_server.assert_async().await;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_service_async() -> Result<(), Box<dyn std::error::Error>> {
+    let mut server = mockito::Server::new_async().await;
+
+    let mock_server = create_mock_server(&mut server, "/api/services/notify/action")
+        .with_body(r#"[{
+            "attributes": {},
+            "entity_id": "process.Dropbox",
+            "last_changed": "2016-05-30T21:43:32.418320+00:00",
+            "state": "on"
+        }]"#)
+        .create_async()
+        .await;
+
+    let client = Client::new(server.url().as_str(), "test_token")?;
+
+    let service_response = client
+        .post_service(post::CallServiceParams {
+            domain: "notify".to_owned(),
+            service: "action".to_owned(),
+            service_data: Some(json!({
+                "message": "rust test"
+            }))
+        })
+        .await?;
+
+    assert_eq!(service_response.len(), 1);
+    assert_eq!(service_response[0].attributes, HashMap::new());
+    assert_eq!(service_response[0].entity_id, "process.Dropbox");
+    assert_eq!(service_response[0].last_changed, DateTime::parse_from_rfc3339("2016-05-30T21:43:32.418320+00:00").unwrap());
+    assert_eq!(service_response[0].state, Some(StateEnum::String("on".to_string())));
 
     mock_server.assert_async().await;
 
